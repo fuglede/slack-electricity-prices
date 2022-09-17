@@ -81,6 +81,17 @@ def post_message(url: str, message: str) -> None:
     print(message)
 
 
+def parse_price(record) -> float:
+    # The DKK price is not updated on weekends, so we rely on the EUR one instead in those cases
+    if r := record["SpotPriceDKK"] is not None:
+        return r
+    # Get a more or less up to date currency rate
+    url = "https://cdn.jsdelivr.net/gh/fawazahmed0/currency-api@1/latest/currencies/eur/dkk.json"
+    result = requests.get(url).json()
+    dkk_per_eur = result["dkk"]
+    return record["SpotPriceEUR"] * dkk_per_eur
+
+
 def get_prices(price_area: str) -> List[Tuple[str, float]]:
     url = (
         "https://api.energidataservice.dk/dataset/Elspotprices?limit=24&filter={%22PriceArea%22:%22"
