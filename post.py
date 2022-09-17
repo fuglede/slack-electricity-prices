@@ -31,7 +31,7 @@ def get_latest_data_date() -> Tuple[int, int, int]:
     date_string = result["records"][0]["HourDK"]
     # Example date_string to be parsed: "2022-09-17T23:00:00"
     year, month, day = map(int, date_string.split("T")[0].split("-"))
-    return datetime(year, month, day)
+    return datetime(year, month, day, tzinfo=ZONE)
 
 
 def update_available() -> bool:
