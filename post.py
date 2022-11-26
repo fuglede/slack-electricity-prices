@@ -54,7 +54,7 @@ def update_available() -> bool:
     return latest_data_date > now
 
 
-def update(webhook_url: str) -> None:
+def update(webhook_urls: list[str]) -> None:
     message_parts = []
     for price_area in ("DK1", "DK2"):
         prices = get_prices(price_area)
@@ -62,7 +62,14 @@ def update(webhook_url: str) -> None:
             f"Tomorrow's electricity prices for {price_area}:\n{format_message(prices)}"
         )
     message = "\n\n".join(message_parts)
-    post_message(webhook_url, message)
+    print(message)
+    for webhook_url in webhook_urls:
+        # One of them failing shouldn't affect the other ones
+        try:
+            print(f"Posting to {webhook_url}")
+            post_message(webhook_url, message)
+        except Exception as e:
+            print(e)
     set_last_update(datetime.now(ZONE))
 
 
@@ -70,15 +77,23 @@ def format_message(prices: List[Tuple[str, float]]) -> str:
     lowest_time, lowest_price = min(prices, key=lambda s: s[1])
     highest_time, highest_price = max(prices, key=lambda s: s[1])
     mean = statistics.mean(p[1] for p in prices)
-    return f"Lowest price: {round(lowest_price)} DKK/MWh ({lowest_time})\nHighest price: {round(highest_price)} DKK/MWh ({highest_time})\nAverage price: {round(mean)} DKK/MWh"
+    return f"Lowest price: {lowest_price/1000:.2f} DKK/kWh ({lowest_time})\nHighest price: {highest_price/1000:.2f} DKK/kWh ({highest_time})\nAverage price: {mean/1000:.2f} DKK/kWh"
 
 
 def post_message(url: str, message: str) -> None:
-    data = {"text": message}
-    requests.post(
-        url, data=json.dumps(data), headers={"Content-Type": "application/json"}
-    )
-    print(message)
+    # Slack?
+    if url.startswith('https://hooks.slack.com'):
+        data = {"text": message}
+        requests.post(
+            url, data=json.dumps(data), headers={"Content-Type": "application/json"}
+        )
+    # Something else? Must be Mastodon!
+    else:
+        host_instance, token = url.split('?')
+        headers = {'Authorization': 'Bearer ' + token}
+        data = {'status': message, 'visibility': 'public'}
+        requests.post(
+            url=host_instance + '/api/v1/statuses', data=data, headers=headers)
 
 
 def parse_price(record) -> float:
@@ -104,5 +119,5 @@ def get_prices(price_area: str) -> List[Tuple[str, float]]:
 
 if __name__ == "__main__":
     if update_available():
-        webhook_url = sys.argv[1]
-        update(webhook_url)
+        webhook_urls = sys.argv[1:]
+        update(webhook_urls)
