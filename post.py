@@ -82,18 +82,19 @@ def format_message(prices: List[Tuple[str, float]]) -> str:
 
 def post_message(url: str, message: str) -> None:
     # Slack?
-    if url.startswith('https://hooks.slack.com'):
+    if url.startswith("https://hooks.slack.com"):
         data = {"text": message}
         requests.post(
             url, data=json.dumps(data), headers={"Content-Type": "application/json"}
         )
     # Something else? Must be Mastodon!
     else:
-        host_instance, token = url.split('?')
-        headers = {'Authorization': 'Bearer ' + token}
-        data = {'status': message, 'visibility': 'public'}
+        host_instance, token = url.split("?")
+        headers = {"Authorization": "Bearer " + token}
+        data = {"status": message, "visibility": "public"}
         requests.post(
-            url=host_instance + '/api/v1/statuses', data=data, headers=headers)
+            url=host_instance + "/api/v1/statuses", data=data, headers=headers
+        )
 
 
 def parse_price(record) -> float:
@@ -114,7 +115,7 @@ def get_prices(price_area: str) -> List[Tuple[str, float]]:
         + "%22}"
     )
     data = requests.get(url).json()
-    return [(d["HourDK"], d["SpotPriceDKK"]) for d in data["records"]]
+    return [(d["HourDK"].replace("T", " "), d["SpotPriceDKK"]) for d in data["records"]]
 
 
 if __name__ == "__main__":
